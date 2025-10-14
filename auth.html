@@ -1,12 +1,99 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>OAuth Callback</title>
-</head>
 <body>
-  <h1>Processing Login...</h1>
+    <h2>Login with Google</h2>
+    <button id="googleBtn">Login with Google</button>
 
-  <script src="main.js">console.log("Firebase ID Token:", data.idToken);
-</script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script>
+        const CLIENT_ID = "41311417043-t30ieu5fgspi7ca6rqi4p3eljqld8lcf.apps.googleusercontent.com";
+        const API_KEY = "AIzaSyC5kYvCD9088m14VuzEjJwGmYKLFI-79EA";
+        const PROJECT_ID = "shoppingcart-4b24e";
+        const REDIRECT_URI = "http://127.0.0.1:5500/auth.html";
+
+        // ✅ Global function called by button
+        function loginWithGoogle() {
+            const oauthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=token&scope=openid email profile&prompt=select_account`;
+            window.location = oauthUrl;
+        }
+
+        // ✅ Single window.onload blockf
+        window.onload = async () => {
+            // Attach click listener
+            document.getElementById("googleBtn").addEventListener("click", loginWithGoogle);
+
+            // Handle redirect after Google login
+            if (window.location.hash) {
+                const hash = window.location.hash.substring(1);
+                const params = new URLSearchParams(hash);
+                const accessToken = params.get("access_token");
+
+                if (accessToken) {
+                    try {
+                        // 1️⃣ Sign in with Firebase
+                        const firebaseResp = await axios.post(
+                            `https://identitytoolkit.googleapis.com/v1/accounts:signInWithIdp?key=${API_KEY}`,
+                            {
+                                postBody: `access_token=${accessToken}&providerId=google.com`,
+                                requestUri: REDIRECT_URI,
+                                returnSecureToken: true,
+                                returnIdpCredential: true
+                            }
+                        );
+
+                        const uid = firebaseResp.data.localId;
+                        const idToken = firebaseResp.data.idToken;
+
+                        // 2️⃣ Store uid and idToken
+                        sessionStorage.setItem("uid", uid);
+                        sessionStorage.setItem("idToken", idToken);
+
+                        // 3️⃣ Try to fetch user document from Firestore
+                        // After signing in with Firebase
+                        const email = firebaseResp.data.email;
+
+                        // 3️⃣ Fetch all users and find the one with this email
+                        let role = "user"; // default
+                        try {
+                            const usersResp = await axios.get(
+                                `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/users`,
+                                { headers: { Authorization: `Bearer ${idToken}` } }
+                            );
+
+                            const users = usersResp.data.documents || [];
+                            const matchedUser = users.find(u => u.fields.email.stringValue === email);
+
+                            if (matchedUser) {
+                                role = matchedUser.fields.role.stringValue || "user";
+                            } else {
+                                // Create new user if not exist
+                                await axios.patch(
+                                    `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/users/${firebaseResp.data.localId}?currentDocument.exists=false`,
+                                    {
+                                        fields: {
+                                            email: { stringValue: email },
+                                            role: { stringValue: "user" }
+                                        }
+                                    },
+                                    { headers: { Authorization: `Bearer ${idToken}` } }
+                                );
+                                role = "user";
+                            }
+                        } catch (err) {
+                            console.error(err);
+                        }
+
+                        // Store role
+                        sessionStorage.setItem("role", role);
+
+                        // Redirect based on role
+                        if (role === "admin") window.location = "dashboard.html";
+                        else window.location = "dashboard.html";
+
+                    } catch (err) {
+                        console.error(err);
+                        alert("Google login failed: " + (err.response?.data?.error?.message || err));
+                    }
+                }
+            }
+        };
+    </script>
 </body>
-</html>

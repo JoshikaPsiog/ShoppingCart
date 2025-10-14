@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+<h1>Dashboard</h1>
+<h2 id="welcomeText"></h2>
+
+<button id="logoutBtn">Logout</button>
+
+<!-- Admin Controls -->
+<!-- <div id="adminControls" style="display: none;">
+    <h3>Admin Controls</h3>
+    <input type="text" id="productName" placeholder="Product Name">
+    <input type="number" id="productQty" placeholder="Quantity">
+    <button onclick="addProduct()">Add Product</button>
+</div> -->
+<div id="adminSection" style="display:none;">
+  <h3>Admin Controls</h3>
+  <input type="text" id="productName" placeholder="Product Name">
+  <input type="number" id="productQty" placeholder="Quantity">
+  <button onclick="addProduct()">Add Product</button>
+  <div id="productList"></div>
+</div>
+
+
+
+
+<!-- <h3>Available Products</h3>
+<div id="productList"></div> -->
+<div id="userSection" style="display:none;">
+  <h3>Available Products</h3>
+  <div id="userProductList"></div>
+</div>
+
+
+
+<h3>Your Cart</h3>
+<div id="cartList"></div>
+
+<script>
+    // Shared logout function
+    document.getElementById("logoutBtn").onclick = () => {
+        sessionStorage.clear();
+        window.location = "auth.html";
+    };
+
+    const role = sessionStorage.getItem("role");
+    const uid = sessionStorage.getItem("uid");
+    const idToken = sessionStorage.getItem("idToken");
+
+    if (!uid || !idToken) {
+        window.location = "auth.html";
+    }
+
+    // Dynamically load role-specific JS
+    if (role === "admin") {
+    document.getElementById("adminSection").style.display = "block"; // ✅ fixed ID
+    const script = document.createElement("script");
+    script.src = "js/admin.js";
+    document.body.appendChild(script);
+} else {
+    document.getElementById("userSection").style.display = "block"; // ✅ for user
+    const script = document.createElement("script");
+    script.src = "js/user.js";
+    document.body.appendChild(script);
+}
+
+</script>
+</body>
+</html>
