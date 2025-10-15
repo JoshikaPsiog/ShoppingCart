@@ -1,100 +1,243 @@
-/* === Body & Theme === */
+:root {
+  --gold: #ffd700;
+  --paper: #f5f5e1;
+  --ink: #0172a;
+  --muted: #94a3b8;
+  --panel: rgba(0, 0, 0, 0.6);
+  --card-bg: rgba(255, 25, 255, 0.1);
+  --card-border: rgba(255, 55, 255, 0.35);
+  --btn: #8b0000;
+  --btn-hover: #ff4500;
+}
+
+* {
+  box-sizing: border-box;
+}
+
 body {
-    background: url('https://www.wallpaperboulevard.com/Images/product/harry-potter-places-wallpaper-vfsy.jpg') no-repeat center center fixed;
-    background-size: cover;
-    font-family: 'Henny Penny', cursive;
-    color: #f5f0e1;
-    padding: 20px;
+  background: url('https://www.wallpaperboulevard.com/Images/product/harry-potter-places-wallpaper-vfsy.jpg') no-repeat center center fixed;
+  background-size: cover;
+  font-family: 'Henny Penny', cursive;
+  color: var(--paper);
+  padding: 20px;
+  margin: 0;
 }
 
-/* Header */
-header h1 {
-    color: #ffd700;
-    text-shadow: 2px 2px #000;
+.header h1 {
+  color: var(--gold);
+  text-shadow: 2px 2px #000;
+  margin: 0 0 8px 0;
 }
 
-header h2 {
-    color: #ffd700;
-    text-shadow: 1px 1px #000;
-    font-family: 'Henny Penny', cursive;
+.header h2 {
+  color: var(--gold);
+  text-shadow: 1px 1px #000;
+  margin: 6px 0 0 0;
 }
 
-/* Sections */
 .section {
-    margin: 20px 0;
-    background-color: rgba(0, 0, 0, 0.6);
-    padding: 15px;
-    border-radius: 10px;
+  margin: 20px 0;
+  background-color: var(--panel);
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
 }
 
-/* Product/Carts Container */
-#userProductList, #productList, #cartList {
-    display: flex;
-    flex-wrap: wrap;       /* wrap to next line if overflow */
-    gap: 15px;             /* space between cards */
+/* Product/Admin lists */
+#userProductList,
+#productList {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
 }
 
-/* Product / Cart Box */
-#userProductList div, #productList div, #cartList div {
-    background-color: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 8px;
-    padding: 10px;
-    width: calc(25% - 15px); /* 4 boxes per row with gap */
-    box-sizing: border-box;
-    text-align: center;
-    font-family: 'Playwrite AU TAS', cursive;
-    color: #f5f0e1;
+#userProductList .item,
+#productList .admin-item {
+  background-color: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  padding: 12px;
+  color: var(--paper);
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto auto;
+  row-gap: 6px;
+  column-gap: 6px;
+  align-items: center;
 }
 
-/* Name left, qty+button right inside card */
-#userProductList div, #productList div {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+#userProductList .item strong,
+#productList .admin-item strong {
+  grid-column: 1 / 1;
+  font-size: 18px;
 }
 
-/* Buttons inside box */
-#userProductList div button, #productList div button {
-    margin-left: 5px;
-    padding: 5px 10px;
-    font-size: 0.8em;
-    border-radius: 5px;
-    cursor: pointer;
-}
-
-/* Input fields */
-input {
-    padding: 5px;
-    margin: 5px 0;
-    border-radius: 5px;
-    border: none;
-    width: calc(100% - 10px);
-}
-
-/* Buttons */
 button {
-    background-color: #8b0000;
-    color: #fff;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: 0.2s;
+  background-color: var(--btn);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: 0.2s ease;
+  padding: 8px 12px;
 }
 
 button:hover {
-    background-color: #ffcc00;
-    color: #000;
-}
-/* Responsive: smaller screens */
-@media (max-width: 768px) {
-    #userProductList div, #productList div {
-        width: calc(50% - 10px); /* 2 per row */
-    }
+  background-color: var(--btn-hover);
+  color: #000;
 }
 
-@media (max-width: 480px) {
-    #userProductList div, #productList div {
-        width: 100%; /* 1 per row */
-    }
+label {
+  display: block;
+  margin-bottom: 6px;
+}
+
+input,
+textarea {
+  padding: 8px 10px;
+  margin: 6px 0;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  width: 100%;
+}
+
+/* Cart Modal */
+#cartOverlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 99;
+}
+
+#cartModal {
+  display: none;
+  position: fixed;
+  top: 64px;
+  right: 4px;
+  width: 640px;
+  max-width: calc(100vw - 48px);
+  max-height: 76vh;
+  background: #ffffff;
+  color: var(--ink);
+  border-radius: 14px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.35);
+  padding: 14px;
+  z-index: 1000;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+#cartModal .modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+#closeCartModal {
+  background: transparent;
+  border: 1px solid #cbd5e1;
+  color: var(--ink);
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+
+#closeCartModal:hover {
+  background: #f1f5f9;
+}
+
+#cartList {
+    background-image: url('https://www.wallpapershop.co.uk/news/wp-content/uploads/2021/05/Harry-Potter-Wallpaper-Slytherin-Hogwarts-Gryffindor-Hufflepuff-Ravenclaw-Marauders-Map-Wallpaper.jpg');
+  background-size: cover;
+  margin-top: 12px;
+  max-height: calc(76vh - 64px);
+  overflow: auto;
+  padding-right: 8px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+#cartList .cart-item {
+  background: #e5e7eb ;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 12px;
+  color: #111827; /* fallback if you don’t define --ink */
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+
+#cartList .cart-item button {
+  margin-top: 8px;
+  margin-right: 6px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #111827;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+}
+
+#cartList .cart-item button:hover {
+  filter: brightness(0.92);
+}
+#orderPlacedPopup {
+    z-index: 1200; /* or higher than checkout modal */
+}
+
+#cartList .cart-total {
+  position: sticky;
+  bottom: 0;
+  background: #ce6161;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 12px;
+  font-weight: 700;
+  grid-column: 1 / -1;
+}
+
+@supports (scrollbar-color: auto) {
+  #cartList {
+    scrollbar-width: thin;
+    scrollbar-color: #94a3b8 #e2e8f0;
+  }
+  #cartList::-webkit-scrollbar {
+    width: 10px;
+  }
+  #cartList::-webkit-scrollbar-track {
+    background: #e2e8f0;
+    border-radius: 8px;
+  }
+  #cartList::-webkit-scrollbar-thumb {
+    background: #94a3b8;
+    border-radius: 8px;
+  }
+  #cartList::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
+  }
+}
+
+/* Responsive */
+@media (max-width: 1040px) {
+  #cartModal {
+    right: 24px;
+    width: 560px;
+  }
+}
+
+@media (max-width: 768px) {
+  #cartModal {
+    left: 16px;
+    right: 16px;
+    width: auto;
+  }
+  #userProductList,
+  #productList {
+    grid-template-columns: 1fr 1fr;
+  }
 }

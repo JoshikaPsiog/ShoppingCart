@@ -1,7 +1,12 @@
 <body>
-    <h2>Login with Google</h2>
-    <button id="googleBtn">Login with Google</button>
+   <body>
+    <div class="login-container">
+        <h2>Login with Google</h2>
+        <button id="googleBtn">Login with Google</button>
+    </div>
+</body>
 
+<link rel="stylesheet" href="auth.css" />
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script>
         const CLIENT_ID = "41311417043-t30ieu5fgspi7ca6rqi4p3eljqld8lcf.apps.googleusercontent.com";
@@ -9,13 +14,13 @@
         const PROJECT_ID = "shoppingcart-4b24e";
         const REDIRECT_URI = "http://127.0.0.1:5500/auth.html";
 
-        // ✅ Google login redirect
+        // Google login redirect
         function loginWithGoogle() {
             const oauthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=token&scope=openid email profile&prompt=select_account`;
             window.location = oauthUrl;
         }
 
-        // ✅ Handle Firebase + Firestore login
+        // Handle Firebase + Firestore login
         async function handleLogin(accessToken) {
             try {
                 // 1️⃣ Sign in with Firebase Auth REST API using Google Access Token

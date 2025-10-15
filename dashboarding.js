@@ -6,24 +6,32 @@ const role = sessionStorage.getItem("role");
 const isAdmin = role === "admin";
 
 if (!uid || !idToken) {
-  alert("❌ You must log in first!");
-  window.location.href = "auth.html";
+    alert("❌ You must log in first!");
+    window.location.href = "auth.html";
 }
 
 // ================= DOM Elements =================
 const welcomeText = document.getElementById("welcomeText");
 const adminSection = document.getElementById("adminSection");
 const userSection = document.getElementById("userSection");
-const cartSection = document.getElementById("cartSection");
+const cartSection = document.getElementById("cartSection"); // may not exist; guarded below
 const logoutBtn = document.getElementById("logoutBtn");
+
+// Pay Now (checkout) elements
+const modalCheckout = document.getElementById("checkoutModal");
+const confirmOrderBtn = document.getElementById("confirmOrder");
+const cancelOrderBtn = document.getElementById("cancelOrder");
+const orderPlacedPopup = document.getElementById("orderPlacedPopup");
 
 // Admin inputs
 const productNameInput = document.getElementById("productName");
 const productQtyInput = document.getElementById("productQty");
+const productPriceInput = document.getElementById("productPrice");
+const productImageInput = document.getElementById("productImage");
 const addProductBtn = document.getElementById("addProductBtn");
 const productListDiv = document.getElementById("productList");
 
-// User products container
+// User containers
 const userProductList = document.getElementById("userProductList");
 const cartList = document.getElementById("cartList");
 
@@ -33,298 +41,550 @@ let userCurrentPage = 0;
 let adminPages = [];
 let adminCurrentPage = 0;
 
-// Set welcome text
-const username = sessionStorage.getItem("role") || uid;
-welcomeText.textContent = `Welcome, ${username}!`;
-
-// Show sections based on role
-if (isAdmin) {
-  adminSection.style.display = "block";
-  userSection.style.display = "none";
-  cartSection.style.display = "none";
-} else {
-  adminSection.style.display = "none";
-  userSection.style.display = "block";
-  cartSection.style.display = "block";
+// ================= Modal Helpers =================
+function showCart() {
+    const overlay = document.getElementById("cartOverlay");
+    const modal = document.getElementById("cartModal");
+    if (overlay) overlay.style.display = "block";
+    if (modal) modal.style.display = "block";
+    loadCart();
 }
 
-// Logout
-logoutBtn.onclick = () => {
-  sessionStorage.clear();
-  window.location.href = "auth.html";
-};
+function hideCart() {
+    const overlay = document.getElementById("cartOverlay");
+    const modal = document.getElementById("cartModal");
+    if (overlay) overlay.style.display = "none";
+    if (modal) modal.style.display = "none";
+}
 
 // ================= Admin Functions =================
 async function loadAdminProductsPaginated(direction = "next") {
-  try {
-    let url = `${BASE_URL}/products?pageSize=4`;
-    let targetIndex = adminCurrentPage;
-    if (direction === "next") targetIndex++;
-    else if (direction === "prev" && adminCurrentPage > 0) targetIndex--;
+    try {
+        let url = `${BASE_URL}/products?pageSize=4`;
+        let targetIndex = adminCurrentPage;
+        if (direction === "next") targetIndex++;
+        else if (direction === "prev" && adminCurrentPage > 0) targetIndex--;
 
-    if (targetIndex > 0 && adminPages[targetIndex - 1]) {
-      url += `&pageToken=${adminPages[targetIndex - 1]}`;
+        if (targetIndex > 0 && adminPages[targetIndex - 1]) {
+            url += `&pageToken=${adminPages[targetIndex - 1]}`;
+        }
+
+        const resp = await axios.get(url, { headers: { Authorization: `Bearer ${idToken}` } });
+        const products = resp.data.documents || [];
+
+        productListDiv.innerHTML = "";
+        if (!products.length) productListDiv.innerHTML = "<p>No products found.</p>";
+
+        products.forEach(doc => {
+            const id = doc.name.split("/").pop();
+            const name = doc.fields.name.stringValue;
+            const qty = parseInt(doc.fields.qty?.integerValue ?? 0);
+            const price = parseFloat(doc.fields.price?.doubleValue ?? doc.fields.price?.integerValue ?? 0);
+
+            const div = document.createElement("div");
+            div.className = "admin-item";
+            div.innerHTML = `
+    <img src="${doc.fields.imageUrl?.stringValue}" alt="${name}" width="80" style="vertical-align:middle; margin-right:8px;" />
+    <strong>${name}</strong> — Qty: ${qty} — $${price.toFixed(2)}
+    <button class="btn-edit" onclick="editProductPrompt('${id}', '${name.replace(/'/g, "\\'")}', ${qty}, ${price})">Edit</button>
+    <button class="btn-delete" onclick="deleteProduct('${id}')">Delete</button>
+`;
+
+            productListDiv.appendChild(div);
+        });
+
+        if (direction === "next" && resp.data.nextPageToken) {
+            adminPages[adminCurrentPage] = resp.data.nextPageToken;
+        }
+
+        const prev = document.getElementById("prevPage");
+        const next = document.getElementById("nextPage");
+        adminCurrentPage = targetIndex;
+        if (prev) prev.disabled = adminCurrentPage === 0;
+        if (next) next.disabled = !resp.data.nextPageToken;
+    } catch (err) {
+        console.error("❌ Admin fetch error:", err);
+        productListDiv.innerHTML = "<p>Failed to load products.</p>";
     }
-
-    const resp = await axios.get(url, { headers: { Authorization: `Bearer ${idToken}` } });
-    const products = resp.data.documents || [];
-
-    productListDiv.innerHTML = "";
-    if (!products.length) productListDiv.innerHTML = "<p>No products found.</p>";
-
-    products.forEach(doc => {
-      const id = doc.name.split("/").pop();
-      const name = doc.fields.name.stringValue;
-      const qty = parseInt(doc.fields.qty?.integerValue ?? 0);
-      const price = parseFloat(doc.fields.price?.doubleValue ?? doc.fields.price?.integerValue ?? 0);
-
-      const div = document.createElement("div");
-      div.className = "admin-item";
-      div.innerHTML = `<strong>${name}</strong> — Qty: ${qty} — $${price.toFixed(2)}
-        <button class="btn-delete" onclick="deleteProduct('${id}')">Delete</button>`;
-      productListDiv.appendChild(div);
-    });
-
-    if (direction === "next" && resp.data.nextPageToken) {
-      adminPages[adminCurrentPage] = resp.data.nextPageToken;
-    }
-
-    adminCurrentPage = targetIndex;
-    document.getElementById("prevPage").disabled = adminCurrentPage === 0;
-    document.getElementById("nextPage").disabled = !resp.data.nextPageToken;
-
-  } catch (err) {
-    console.error("❌ Admin fetch error:", err);
-    productListDiv.innerHTML = "<p>Failed to load products.</p>";
-  }
 }
 
-// Admin buttons
-document.getElementById("nextPage").onclick = () => loadAdminProductsPaginated("next");
-document.getElementById("prevPage").onclick = () => loadAdminProductsPaginated("prev");
+const nextPageBtn = document.getElementById("nextPage");
+const prevPageBtn = document.getElementById("prevPage");
+if (nextPageBtn) nextPageBtn.onclick = () => loadAdminProductsPaginated("next");
+if (prevPageBtn) prevPageBtn.onclick = () => loadAdminProductsPaginated("prev");
 
+// Admin add product (includes price)
+if (addProductBtn) {
+    
 addProductBtn.onclick = async () => {
-  const name = productNameInput.value.trim();
-  const qty = parseInt(productQtyInput.value);
-  if (!name || isNaN(qty)) return alert("Enter product name & qty");
+    const name = productNameInput.value.trim();
+    const qty = parseInt(productQtyInput.value);
+    const priceVal = parseFloat(productPriceInput.value);
+    const imageUrl = productImageInput.value.trim();
 
-  try {
-    await axios.post(`${BASE_URL}/products?documentId=${name}`,
-      { fields: { name: { stringValue: name }, qty: { integerValue: qty } } },
-      { headers: { Authorization: `Bearer ${idToken}` } }
-    );
-    productNameInput.value = "";
-    productQtyInput.value = "";
-    adminPages = [];
-    adminCurrentPage = 0;
-    loadAdminProductsPaginated();
-  } catch (err) {
-    console.error(err);
-    alert("Failed to add product.");
-  }
+    if (!name || isNaN(qty) || isNaN(priceVal) || !imageUrl) {
+        alert("Enter product name, quantity, price, and image URL.");
+        return;
+    }
+
+    const body = {
+        fields: {
+            name:  { stringValue: name },
+            qty:   { integerValue: qty },
+            price: { doubleValue: priceVal },
+            imageUrl: { stringValue: imageUrl }  // ✅ Add this field
+        }
+    };
+
+    try {
+        const url = `${BASE_URL}/products?documentId=${encodeURIComponent(name)}`;
+        await axios.post(url, body, { headers: { Authorization: `Bearer ${idToken}` } });
+
+        // Clear inputs
+        productNameInput.value = "";
+        productQtyInput.value = "";
+        productPriceInput.value = "";
+        productImageInput.value = "";
+
+        adminPages = []; adminCurrentPage = 0;
+        loadAdminProductsPaginated("next");
+    } catch (err) {
+        console.error("Add product failed:", err.response?.data || err);
+        alert("Failed to add product.");
+    }
 };
+}
 
 async function deleteProduct(id) {
-  if (!confirm("Delete this product?")) return;
-  try {
-    await axios.delete(`${BASE_URL}/products/${id}`, { headers: { Authorization: `Bearer ${idToken}` } });
-    adminPages = [];
-    adminCurrentPage = 0;
-    loadAdminProductsPaginated();
-  } catch (err) {
-    console.error(err);
-    alert("Failed to delete product.");
-  }
+    if (!confirm("Delete this product?")) return;
+    try {
+        await axios.delete(`${BASE_URL}/products/${id}`, { headers: { Authorization: `Bearer ${idToken}` } });
+        adminPages = []; adminCurrentPage = 0;
+        loadAdminProductsPaginated("next");
+    } catch (err) {
+        console.error(err);
+        alert("Failed to delete product.");
+    }
 }
 
-// ================= User Functions =================
-async function ensureUserDoc() {
-  try {
-    await axios.get(`${BASE_URL}/users/${uid}`, { headers: { Authorization: `Bearer ${idToken}` } });
-  } catch {
-    await axios.patch(`${BASE_URL}/users/${uid}`,
-      { fields: { createdAt: { timestampValue: new Date().toISOString() } } },
-      { headers: { Authorization: `Bearer ${idToken}` } }
-    );
-  }
-}
+async function editProductPrompt(id, oldName, oldQty, oldPrice) {
+    const name = prompt("Enter new name:", oldName);
+    const qty = parseInt(prompt("Enter new quantity:", oldQty));
+    const price = parseFloat(prompt("Enter new price:", oldPrice));
 
-async function loadUserProductsPaginated(direction = "next") {
-  try {
-    const listDiv = document.getElementById("userProductList");
-    let url = `${BASE_URL}/products?pageSize=4`;
-
-    let targetIndex = userCurrentPage;
-    if (direction === "next") targetIndex++;
-    else if (direction === "prev" && userCurrentPage > 0) targetIndex--;
-
-    if (targetIndex > 0 && userPages[targetIndex - 1]) {
-      url += `&pageToken=${userPages[targetIndex - 1]}`;
+    if (!name || isNaN(qty) || isNaN(price)) {
+        alert("❌ Invalid input. Please check your values.");
+        return;
     }
 
-    const resp = await axios.get(url, { headers: { Authorization: `Bearer ${idToken}` } });
-    const products = resp.data.documents || [];
-
-    listDiv.innerHTML = "";
-    if (!products.length) listDiv.innerHTML = "<p>No items in stock ⚡</p>";
-
-    products.forEach(doc => {
-      const id = doc.name.split("/").pop();
-      const name = doc.fields.name.stringValue;
-      const qty = parseInt(doc.fields.qty?.integerValue ?? 0);
-      const price = parseFloat(doc.fields.price?.doubleValue ?? doc.fields.price?.integerValue ?? 0);
-
-      const div = document.createElement("div");
-      div.className = "item";
-      div.innerHTML = `<strong>${name}</strong> — Qty: ${qty} — $${price.toFixed(2)}
-        <button class="btn-primary" onclick="addToCart('${id}', '${name}', ${price})">Add to Cart</button>`;
-      listDiv.appendChild(div);
-    });
-
-    if (direction === "next" && resp.data.nextPageToken) {
-      userPages[userCurrentPage] = resp.data.nextPageToken;
-    }
-
-    userCurrentPage = targetIndex;
-    document.getElementById("prevUserPage").disabled = userCurrentPage === 0;
-    document.getElementById("nextUserPage").disabled = !resp.data.nextPageToken;
-
-  } catch (err) {
-    console.error("❌ User fetch error:", err);
-    userProductList.innerHTML = "<p>Failed to load products.</p>";
-  }
-}
-
-document.getElementById("nextUserPage").onclick = () => loadUserProductsPaginated("next");
-document.getElementById("prevUserPage").onclick = () => loadUserProductsPaginated("prev");
-
-// ================= Cart Functions =================
-async function addToCart(productId, name, price) {
-  const cartRef = `${BASE_URL}/users/${uid}/cart?documentId=${productId}`;
-  let existingQty = 0;
-
-  try {
-    const resp = await axios.get(`${BASE_URL}/users/${uid}/cart/${productId}`, {
-      headers: { Authorization: `Bearer ${idToken}` }
-    });
-    existingQty = parseInt(resp.data.fields.quantity.integerValue || 0);
-  } catch (err) {
-    if (err.response?.status !== 404) return console.error(err);
-  }
-
-  try {
-    if (existingQty) {
-      // Update quantity only
-      await axios.patch(
-        `${BASE_URL}/users/${uid}/cart/${productId}?updateMask.fieldPaths=quantity`,
-        { fields: { quantity: { integerValue: existingQty + 1 } } },
-        { headers: { Authorization: `Bearer ${idToken}` } }
-      );
-    } else {
-      // Add new cart item with price
-      await axios.post(
-        cartRef,
-        {
-          fields: {
-            productId: { stringValue: productId },
+    const body = {
+        fields: {
             name: { stringValue: name },
-            quantity: { integerValue: 1 },
-            price: { doubleValue: price }   // ✅ Save price here
-          }
-        },
-        { headers: { Authorization: `Bearer ${idToken}` } }
-      );
-    }
+            qty: { integerValue: qty },
+            price: { doubleValue: price }
+        }
+    };
 
-    loadCart();
-  } catch (err) {
-    console.error("❌ Add to cart error:", err);
-  }
+    try {
+        const patchURL = `${BASE_URL}/products/${id}?updateMask.fieldPaths=name&updateMask.fieldPaths=qty&updateMask.fieldPaths=price`;
+        await axios.patch(patchURL, body, { headers: { Authorization: `Bearer ${idToken}` } });
+        alert("Product updated successfully!");
+        loadAdminProductsPaginated("next");
+    } catch (err) {
+        console.error("❌ Update product error:", err.response || err);
+        alert("Failed to update product.");
+    }
 }
 
+// ====== User & Cart Functions ======
+// ================= User Product Functions =================
+async function loadUserProductsPaginated(direction = "next") {
+    try {
+        const listDiv = document.getElementById("userProductList");
+        if (!listDiv) return;
 
-async function loadCart() {
-  const cartDiv = document.getElementById("cartList");
-  cartDiv.innerHTML = "";
+        let url = `${BASE_URL}/products?pageSize=4`;
+        let targetIndex = userCurrentPage;
 
-  try {
-    const resp = await axios.get(`${BASE_URL}/users/${uid}/cart?pageSize=50`, {
-      headers: { Authorization: `Bearer ${idToken}` }
-    });
+        if (direction === "next") targetIndex++;
+        else if (direction === "prev" && userCurrentPage > 0) targetIndex--;
 
-    const items = resp.data.documents || [];
-    if (!items.length) {
-      cartDiv.innerHTML = "<p>Your cart is empty.</p>";
-      return;
+        if (targetIndex > 0 && userPages[targetIndex - 1]) {
+            url += `&pageToken=${userPages[targetIndex - 1]}`;
+        }
+
+        const resp = await axios.get(url, { headers: { Authorization: `Bearer ${idToken}` } });
+        const products = resp.data.documents || [];
+
+        listDiv.innerHTML = "";
+        if (!products.length) {
+            listDiv.innerHTML = "<p>No items in stock ⚡</p>";
+        }
+
+        products.forEach(doc => {
+            const id = doc.name.split("/").pop();
+            const name = doc.fields.name.stringValue;
+            const qty = parseInt(doc.fields.qty?.integerValue ?? 0);
+            const price = parseFloat(doc.fields.price?.doubleValue ?? doc.fields.price?.integerValue ?? 0);
+
+            const div = document.createElement("div");
+            div.className = "item";
+           div.innerHTML = `
+    <img src="${doc.fields.imageUrl?.stringValue}" alt="${name}" width="100" style="display:block; margin-bottom:4px;" />
+    <strong>${name}</strong> — Qty: ${qty} — $${price.toFixed(2)}
+    <button class="btn-primary" onclick="addToCart('${id}', '${name.replace(/'/g,"\\'")}', ${price})">Add to Cart</button>
+`;
+
+            listDiv.appendChild(div);
+        });
+
+        if (direction === "next" && resp.data.nextPageToken) {
+            userPages[userCurrentPage] = resp.data.nextPageToken;
+        }
+
+        userCurrentPage = targetIndex;
+        const prev = document.getElementById("prevUserPage");
+        const next = document.getElementById("nextUserPage");
+        if (prev) prev.disabled = userCurrentPage === 0;
+        if (next) next.disabled = !resp.data.nextPageToken;
+
+    } catch (err) {
+        console.error("❌ User fetch error:", err);
+        if (userProductList) userProductList.innerHTML = "<p>Failed to load products.</p>";
+    }
+}
+
+const nextUserBtn = document.getElementById("nextUserPage");
+const prevUserBtn = document.getElementById("prevUserPage");
+if (nextUserBtn) nextUserBtn.onclick = () => loadUserProductsPaginated("next");
+if (prevUserBtn) prevUserBtn.onclick = () => loadUserProductsPaginated("prev");
+
+async function ensureUserDoc() {
+    try {
+        await axios.get(`${BASE_URL}/users/${uid}`, { headers: { Authorization: `Bearer ${idToken}` } });
+    } catch {
+        await axios.patch(`${BASE_URL}/users/${uid}`,
+            { fields: { createdAt: { timestampValue: new Date().toISOString() } } },
+            { headers: { Authorization: `Bearer ${idToken}` } }
+        );
+    }
+}
+
+// Add product to cart
+async function addToCart(productId, name, price = 0) {
+    if (!uid || !idToken) return alert("Please log in first!");
+    const cartRef = `${BASE_URL}/users/${uid}/cart`;
+    let cartItems = [];
+
+    try {
+        const resp = await axios.get(cartRef, { headers: { Authorization: `Bearer ${idToken}` } });
+        cartItems = resp.data.documents || [];
+    } catch (err) {
+        if (err.response?.status !== 404) {
+            console.error("⚠️ Fetch cart error:", err);
+            return;
+        }
     }
 
-    let total = 0;
+    const existing = cartItems.find(item => item.fields.productId.stringValue === productId);
 
-    items.forEach(doc => {
-  const id = doc.name.split("/").pop();
-  const name = doc.fields.name.stringValue;
-  const quantity = parseInt(doc.fields.quantity?.integerValue ?? 0);
-  const price = parseFloat(doc.fields.price?.doubleValue ?? doc.fields.price?.integerValue ?? 0);
-  const lineTotal = quantity * price;
-  total += lineTotal;
+    try {
+        if (existing) {
+            const patchURL = `https://firestore.googleapis.com/v1/${existing.name}?updateMask.fieldPaths=quantity`;
+            const existingQty = parseInt(existing.fields.quantity.integerValue);
+            await axios.patch(
+                patchURL,
+                { fields: { quantity: { integerValue: existingQty + 1 } } },
+                { headers: { Authorization: `Bearer ${idToken}` } }
+            );
+        } else {
+            const docId = `cart_${productId}_${Date.now()}`;
+            await axios.post(
+                `${cartRef}?documentId=${docId}`,
+                {
+                    fields: {
+                        productId: { stringValue: productId },
+                        name: { stringValue: name },
+                        quantity: { integerValue: 1 },
+                        price: { doubleValue: parseFloat(price) || 0 }
+                    }
+                },
+                { headers: { Authorization: `Bearer ${idToken}` } }
+            );
+        }
+        alert(`${name} added to your cart!`);
+        await loadCart();
+    } catch (err) {
+        console.error("❌ Add to cart error:", err);
+        alert("Failed to add to cart.");
+    }
+}
 
-  const div = document.createElement("div");
-  div.className = "cart-item";
-  div.innerHTML = `
-    <strong>${name}</strong> — Qty: ${quantity} — $${lineTotal.toFixed(2)}
-    <button onclick="updateCartItem('${id}', ${quantity + 1})">+</button>
-    <button onclick="updateCartItem('${id}', ${quantity - 1})">-</button>
-    <button onclick="removeCartItem('${id}')">Remove</button>
-  `;
-  cartDiv.appendChild(div);
+// Load user cart
+async function loadCart() {
+    if (isAdmin) return;
+    cartList.innerHTML = "";
+    try {
+        const resp = await axios.get(`${BASE_URL}/users/${uid}/cart`, {
+            headers: { Authorization: `Bearer ${idToken}` }
+        });
+        const items = resp.data.documents || [];
+
+        if (!items.length) {
+            cartList.innerHTML = "<p>Your cart is empty.</p>";
+            return;
+        }
+
+        let total = 0;
+        items.forEach(item => {
+            const name = item.fields.name?.stringValue ?? "";
+            const qty  = parseInt(item.fields.quantity?.integerValue ?? 0);
+            const unit = parseFloat(item.fields.price?.doubleValue ?? item.fields.price?.integerValue ?? 0);
+            const line = qty * unit;
+            total += line;
+
+            const row = document.createElement("div");
+            row.className = "cart-item";
+            row.innerHTML = `
+                <div><strong>${name}</strong></div>
+                <div>Qty: ${qty}</div>
+                <div>Unit: $${unit.toFixed(2)}</div>
+                <div>Line: $${line.toFixed(2)}</div>
+            `;
+            cartList.appendChild(row);
+        });
+
+        const totalDiv = document.createElement("div");
+        totalDiv.className = "cart-total";
+        totalDiv.textContent = `🧙‍♂️ Cart Total: $${total.toFixed(2)}`;
+        cartList.appendChild(totalDiv);
+
+        // Pay Now button
+        const payBtn = document.createElement("button");
+        payBtn.textContent = "💳 Pay Now";
+        payBtn.className = "pay-btn";
+        payBtn.onclick = openCheckoutPopup;
+        cartList.appendChild(payBtn);
+
+    } catch (err) {
+        console.error("❌ Load cart error:", err);
+        cartList.innerHTML = "<p>Failed to load cart.</p>";
+    }
+}
+
+// Checkout modal
+function openCheckoutPopup() {
+    if (modalCheckout) modalCheckout.style.display = "flex";
+}
+if (cancelOrderBtn) {
+    cancelOrderBtn.onclick = () => { if (modalCheckout) modalCheckout.style.display = "none"; };
+}
+if (confirmOrderBtn) {
+    confirmOrderBtn.onclick = async () => {
+        const name = document.getElementById("custName").value.trim();
+        const address = document.getElementById("custAddress").value.trim();
+        const phone = document.getElementById("custPhone").value.trim();
+
+        if (!name || !address || !phone) {
+            alert("Please fill in all details!");
+            return;
+        }
+
+        try {
+            // 1️⃣ Get cart items
+            const resp = await axios.get(`${BASE_URL}/users/${uid}/cart`, {
+                headers: { Authorization: `Bearer ${idToken}` }
+            });
+            const items = resp.data.documents || [];
+
+            if (!items.length) {
+                alert("Your cart is empty!");
+                return;
+            }
+
+            // 2️⃣ Prepare order data
+            let total = 0;
+            const orderItems = items.map(doc => {
+                const f = doc.fields;
+                const qty = parseInt(f.quantity?.integerValue ?? 0);
+                const price = parseFloat(f.price?.doubleValue ?? f.price?.integerValue ?? 0);
+                total += qty * price;
+
+                return {
+                    mapValue: {
+                        fields: {
+                            productId: { stringValue: f.productId?.stringValue ?? "" },
+                            name: { stringValue: f.name?.stringValue ?? "" },
+                            quantity: { integerValue: qty },
+                            price: { doubleValue: price }
+                        }
+                    }
+                };
+            });
+
+            const nowIso = new Date().toISOString();
+            const orderBody = {
+                fields: {
+                    customerName: { stringValue: name },
+                    address: { stringValue: address },
+                    phone: { stringValue: phone },
+                    date: { stringValue: nowIso },
+                    totalAmount: { doubleValue: total },
+                    paymentType: { stringValue: "cash" },
+                    items: { arrayValue: { values: orderItems } }
+                }
+            };
+
+            // 3️⃣ Create a unique document ID for the order
+            const orderDocId = `order_${Date.now()}`;
+            await axios.post(
+                `${BASE_URL}/users/${uid}/orderhistory?documentId=${orderDocId}`,
+                orderBody,
+                { headers: { Authorization: `Bearer ${idToken}` } }
+            );
+
+            // 4️⃣ Deduct product quantities from stock
+            for (const doc of items) {
+                const productId = doc.fields.productId.stringValue;
+                const orderedQty = parseInt(doc.fields.quantity.integerValue);
+
+                // Get current product stock
+                const productDoc = await axios.get(`${BASE_URL}/products/${productId}`, {
+                    headers: { Authorization: `Bearer ${idToken}` }
+                });
+
+                const currentQty = parseInt(productDoc.data.fields.qty.integerValue || 0);
+                const newQty = Math.max(currentQty - orderedQty, 0); // avoid negative stock
+
+                // Update product stock
+                await axios.patch(
+                    `${BASE_URL}/products/${productId}?updateMask.fieldPaths=qty`,
+                    { fields: { qty: { integerValue: newQty } } },
+                    { headers: { Authorization: `Bearer ${idToken}` } }
+                );
+            }
+
+            // 5️⃣ Delete cart items
+            for (const doc of items) {
+                await axios.delete(`https://firestore.googleapis.com/v1/${doc.name}`, {
+                    headers: { Authorization: `Bearer ${idToken}` }
+                });
+            }
+
+            // 6️⃣ Close modal and show success
+            if (modalCheckout) modalCheckout.style.display = "none";
+            if (orderPlacedPopup) {
+                orderPlacedPopup.style.display = "block";
+                setTimeout(() => { orderPlacedPopup.style.display = "none"; }, 2000);
+                console.log("✅ Order placed successfully, showing popup...");
+            }
+
+            // 7️⃣ Refresh cart
+            await loadCart();
+
+        } catch (err) {
+            console.error("❌ Place order error:", err.response?.data || err);
+            alert(`Failed to place order. ${err.response?.status ? "Status: " + err.response.status : ""}`);
+        }
+    };
+}
+
+// ===== Customer Report =====
+// Tab switching
+const tabButtons = document.querySelectorAll(".tabBtn");
+const tabContents = document.querySelectorAll(".tabContent");
+
+tabButtons.forEach(btn => {
+    btn.addEventListener("click", () => {
+        const targetId = btn.dataset.tab;
+
+        // Hide all tab contents
+        tabContents.forEach(tc => tc.style.display = "none");
+
+        // Show the selected tab
+        const targetSection = document.getElementById(targetId);
+        if (targetSection) targetSection.style.display = "block";
+    });
 });
 
+const generateCustomerBtn = document.getElementById("generateCustomer");
+const customerReportDiv = document.getElementById("customerReport");
 
-    const totalDiv = document.createElement("div");
-    totalDiv.style.fontWeight = "bold";
-    totalDiv.style.marginTop = "10px";
-    totalDiv.textContent = `🧙‍♂️ Cart Total: $${total.toFixed(2)}`;
-    cartDiv.appendChild(totalDiv);
+if (generateCustomerBtn) {
+    generateCustomerBtn.onclick = async () => {
+        const from = document.getElementById("custFrom").value;
+        const to = document.getElementById("custTo").value;
+        const type = document.getElementById("custType").value;
 
-  } catch (err) {
-    console.error("❌ Failed to load cart:", err);
-    cartDiv.innerHTML = "<p>Failed to load cart.</p>";
-  }
+        if (!from || !to) return alert("Select a date range.");
+
+        try {
+            const resp = await axios.get(`${BASE_URL}/users/${uid}/orderhistory`, {
+                headers: { Authorization: `Bearer ${idToken}` }
+            });
+
+            const orders = resp.data.documents || [];
+            const filtered = orders.filter(o => {
+                const date = o.fields.date.stringValue;
+                const payment = o.fields.paymentType.stringValue;
+                return date >= from && date <= to && (type === "all" || type === payment);
+            });
+
+            if (!filtered.length) customerReportDiv.innerHTML = "<p>No orders found.</p>";
+            else {
+                customerReportDiv.innerHTML = filtered.map(o => {
+                    const name = o.fields.customerName.stringValue;
+                    const total = o.fields.totalAmount.doubleValue;
+                    const payment = o.fields.paymentType.stringValue;
+                    const date = o.fields.date.stringValue;
+                    return `<p><strong>${name}</strong> — $${total} — ${payment} — ${date}</p>`;
+                }).join("");
+            }
+        } catch (err) {
+            console.error(err);
+            customerReportDiv.innerHTML = "<p>Error generating report.</p>";
+        }
+    };
 }
-async function updateCartItem(productId, newQty) {
-  if (newQty < 1) return removeCartItem(productId); // auto-remove if quantity < 1
-
-  try {
-    await axios.patch(
-      `${BASE_URL}/users/${uid}/cart/${productId}?updateMask.fieldPaths=quantity`,
-      { fields: { quantity: { integerValue: newQty } } },
-      { headers: { Authorization: `Bearer ${idToken}` } }
-    );
-    loadCart();
-  } catch (err) {
-    console.error("❌ Failed to update cart item:", err);
-  }
-}
-async function removeCartItem(productId) {
-  try {
-    await axios.delete(`${BASE_URL}/users/${uid}/cart/${productId}`, {
-      headers: { Authorization: `Bearer ${idToken}` }
-    });
-    loadCart();
-  } catch (err) {
-    console.error("❌ Failed to remove cart item:", err);
-  }
-}
 
 
+// ================= Init after DOM Ready =================
+document.addEventListener("DOMContentLoaded", () => {
+    const username = sessionStorage.getItem("role") || uid;
+    if (welcomeText) welcomeText.textContent = `Welcome, ${username}!`;
 
-// ================= Initial Load =================
-window.onload = async () => {
-  if (!isAdmin) {
-    await ensureUserDoc();
-    await loadUserProductsPaginated("next");
-    await loadCart();
-  } else {
-    await loadAdminProductsPaginated("next");
-  }
-};
+    const toggleBtn = document.getElementById("toggleCartBtn");
+    const overlay = document.getElementById("cartOverlay");
+    const modal = document.getElementById("cartModal");
+    const closeBtn = document.getElementById("closeCartModal");
+
+    if (isAdmin) {
+        if (adminSection) adminSection.style.display = "block";
+        if (userSection) userSection.style.display = "none";
+        if (toggleBtn) toggleBtn.style.display = "none";
+        if (overlay) overlay.style.display = "none";
+        if (modal) modal.style.display = "none";
+    } else {
+        if (adminSection) adminSection.style.display = "none";
+        if (userSection) userSection.style.display = "block";
+        if (toggleBtn) toggleBtn.addEventListener("click", showCart);
+        if (closeBtn) closeBtn.addEventListener("click", hideCart);
+        if (overlay) overlay.addEventListener("click", hideCart);
+    }
+
+    if (logoutBtn) {
+        logoutBtn.addEventListener("click", () => {
+            sessionStorage.clear();
+            window.location.href = "auth.html";
+        });
+    }
+
+    if (!isAdmin) {
+        ensureUserDoc().then(async () => {
+            await loadUserProductsPaginated("next");
+            await loadCart();
+        });
+    } else {
+        loadAdminProductsPaginated("next");
+    }
+});

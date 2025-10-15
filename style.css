@@ -1,4 +1,4 @@
-:root{
+/* :root{
   --bg:#0f1220;
   --card:#171b2e;
   --muted:#9aa3b2;
@@ -110,7 +110,7 @@ header h2{margin:0; font-weight:500; font-size:14px; color:var(--muted)}
   color:var(--muted);
   background: #0f1326; border:1px dashed rgba(255,255,255,0.18);
   padding:16px; border-radius:12px; text-align:center;
-}
+} */
 
 /* Make inline buttons match classes in your HTML */
 /* .btn-delete{ composes: btn btn-danger; } /* if using CSS Modules ignore this */
