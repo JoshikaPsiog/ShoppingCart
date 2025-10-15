@@ -1,0 +1,100 @@
+/* === Body & Theme === */
+body {
+    background: url('https://www.wallpaperboulevard.com/Images/product/harry-potter-places-wallpaper-vfsy.jpg') no-repeat center center fixed;
+    background-size: cover;
+    font-family: 'Henny Penny', cursive;
+    color: #f5f0e1;
+    padding: 20px;
+}
+
+/* Header */
+header h1 {
+    color: #ffd700;
+    text-shadow: 2px 2px #000;
+}
+
+header h2 {
+    color: #ffd700;
+    text-shadow: 1px 1px #000;
+    font-family: 'Henny Penny', cursive;
+}
+
+/* Sections */
+.section {
+    margin: 20px 0;
+    background-color: rgba(0, 0, 0, 0.6);
+    padding: 15px;
+    border-radius: 10px;
+}
+
+/* Product/Carts Container */
+#userProductList, #productList, #cartList {
+    display: flex;
+    flex-wrap: wrap;       /* wrap to next line if overflow */
+    gap: 15px;             /* space between cards */
+}
+
+/* Product / Cart Box */
+#userProductList div, #productList div, #cartList div {
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    padding: 10px;
+    width: calc(25% - 15px); /* 4 boxes per row with gap */
+    box-sizing: border-box;
+    text-align: center;
+    font-family: 'Playwrite AU TAS', cursive;
+    color: #f5f0e1;
+}
+
+/* Name left, qty+button right inside card */
+#userProductList div, #productList div {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Buttons inside box */
+#userProductList div button, #productList div button {
+    margin-left: 5px;
+    padding: 5px 10px;
+    font-size: 0.8em;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+/* Input fields */
+input {
+    padding: 5px;
+    margin: 5px 0;
+    border-radius: 5px;
+    border: none;
+    width: calc(100% - 10px);
+}
+
+/* Buttons */
+button {
+    background-color: #8b0000;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+button:hover {
+    background-color: #ffcc00;
+    color: #000;
+}
+/* Responsive: smaller screens */
+@media (max-width: 768px) {
+    #userProductList div, #productList div {
+        width: calc(50% - 10px); /* 2 per row */
+    }
+}
+
+@media (max-width: 480px) {
+    #userProductList div, #productList div {
+        width: 100%; /* 1 per row */
+    }
+}

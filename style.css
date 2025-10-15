@@ -1,27 +1,107 @@
-/* Basic styling for online shop */
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Playfair+Display&display=swap');
 
 body {
-  font-family: Arial, sans-serif;
-  background-color: #f2f2f2;
-  text-align: center;
-  padding: 50px;
+  background: url('https://i.pinimg.com/originals/22/6d/8d/226d8dbf24a8b6eb2ed4b8882e5d48ee.jpg') no-repeat center center fixed;
+  background-size: cover;
+  color: #f5f0d0;
+  font-family: 'Playfair Display', serif;
+  margin: 0;
+  padding: 0;
+  text-shadow: 1px 1px 3px #000;
 }
 
-h1 {
-  color: #333;
-  margin-bottom: 30px;
-}
-
-button {
-  background-color: #4285f4;
-  color: white;
-  border: none;
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: rgba(20, 20, 20, 0.8);
   padding: 15px 30px;
-  font-size: 16px;
-  border-radius: 5px;
-  cursor: pointer;
+  border-bottom: 2px solid goldenrod;
 }
 
-button:hover {
-  background-color: #3367d6;
+.title {
+  font-family: 'Cinzel', serif;
+  font-size: 2rem;
+  color: goldenrod;
+}
+
+.welcome {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 1.3rem;
+}
+
+.hidden {
+  display: none;
+}
+
+.admin-section, .user-section {
+  background-color: rgba(0, 0, 0, 0.7);
+  margin: 30px auto;
+  padding: 20px;
+  width: 80%;
+  border-radius: 12px;
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
+}
+
+.list-container {
+  margin-top: 10px;
+}
+
+.item {
+  background: rgba(50, 50, 50, 0.8);
+  padding: 10px;
+  margin: 8px 0;
+  border-radius: 8px;
+  border: 1px solid goldenrod;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.btn-primary, .btn-danger, .btn-logout {
+  cursor: pointer;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-family: 'Cinzel', serif;
+  transition: 0.3s;
+}
+
+.btn-primary {
+  background-color: goldenrod;
+  color: black;
+}
+
+.btn-primary:hover {
+  background-color: #b8860b;
+}
+
+.btn-danger {
+  background-color: darkred;
+  color: #fff;
+}
+
+.btn-danger:hover {
+  background-color: #8b0000;
+}
+
+.btn-logout {
+  background-color: transparent;
+  border: 1px solid goldenrod;
+  color: goldenrod;
+}
+
+.btn-logout:hover {
+  background-color: goldenrod;
+  color: black;
+}
+
+input {
+  padding: 8px;
+  margin-right: 10px;
+  border-radius: 6px;
+  border: 1px solid goldenrod;
+  background: rgba(40, 40, 40, 0.8);
+  color: #f5f0d0;
 }
