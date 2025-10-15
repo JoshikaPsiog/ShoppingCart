@@ -23,13 +23,24 @@
   <input type="text" id="productName" placeholder="Enter Magical Product">
   <input type="number" id="productQty" placeholder="Stock Quantity">
   <button id="addProductBtn">Add Product</button>
+
   <div id="productList"></div>
+  <div style="text-align:center; margin-top:10px;">
+    <button id="prevPage">Prev</button>
+    <button id="nextPage">Next</button>
+  </div>
 </div>
+
 
 <!-- User Section -->
 <div id="userSection" class="section" style="display:none;">
   <h3>🛒 Available Wizard Goods</h3>
   <div id="userProductList"></div>
+  <!-- Pagination buttons should be OUTSIDE the product list div -->
+  <div style="text-align:center; margin-top:10px;">
+    <button id="prevUserPage">Prev</button>
+    <button id="nextUserPage">Next</button>
+  </div>
 </div>
 
 <!-- Cart Section -->

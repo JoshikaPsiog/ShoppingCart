@@ -1,107 +1,117 @@
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Playfair+Display&display=swap');
-
-body {
-  background: url('https://i.pinimg.com/originals/22/6d/8d/226d8dbf24a8b6eb2ed4b8882e5d48ee.jpg') no-repeat center center fixed;
-  background-size: cover;
-  color: #f5f0d0;
-  font-family: 'Playfair Display', serif;
-  margin: 0;
-  padding: 0;
-  text-shadow: 1px 1px 3px #000;
+:root{
+  --bg:#0f1220;
+  --card:#171b2e;
+  --muted:#9aa3b2;
+  --text:#e6e9ee;
+  --primary:#6c8cff;
+  --primary-hover:#5a79f0;
+  --danger:#ff6b6b;
+  --success:#22c55e;
+  --shadow:rgba(0,0,0,0.25);
+  --radius:12px;
+  --gap:14px;
 }
 
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background-color: rgba(20, 20, 20, 0.8);
-  padding: 15px 30px;
-  border-bottom: 2px solid goldenrod;
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+  color:var(--text);
+  background: radial-gradient(1200px 800px at 20% -10%, #1a1e35 0%, #0f1220 60%) no-repeat, var(--bg);
+  line-height:1.5;
 }
 
-.title {
-  font-family: 'Cinzel', serif;
-  font-size: 2rem;
-  color: goldenrod;
+header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:18px 20px;
+  position:sticky; top:0;
+  background: linear-gradient(180deg, rgba(15,18,32,0.85), rgba(15,18,32,0.65) 60%, transparent);
+  backdrop-filter: blur(6px);
+  z-index:10;
+  border-bottom:1px solid rgba(255,255,255,0.06);
+}
+header h1{margin:0; font-family:"Henny Penny", cursive; letter-spacing:0.5px; font-size:22px}
+header h2{margin:0; font-weight:500; font-size:14px; color:var(--muted)}
+#logoutBtn{
+  background:transparent; color:var(--text);
+  border:1px solid rgba(255,255,255,0.2);
+  padding:8px 12px; border-radius:10px; cursor:pointer;
+  transition:.2s ease; backdrop-filter: blur(2px);
+}
+#logoutBtn:hover{border-color:rgba(255,255,255,0.35); transform:translateY(-1px)}
+
+.section{
+  max-width:1000px; margin:20px auto; padding:18px;
+  background: linear-gradient(180deg, rgba(23,27,46,0.9), rgba(23,27,46,0.75));
+  border:1px solid rgba(255,255,255,0.06);
+  border-radius:var(--radius);
+  box-shadow: 0 10px 30px var(--shadow);
+}
+.section h3{margin:0 0 12px 0; font-weight:600}
+
+.controls{
+  display:flex; gap:var(--gap); flex-wrap:wrap; margin-bottom:var(--gap);
+}
+.controls input{
+  background:#0f1326; color:var(--text);
+  border:1px solid rgba(255,255,255,0.12);
+  padding:10px 12px; border-radius:10px; min-width:200px;
+}
+.btn{
+  border:none; cursor:pointer; border-radius:10px; padding:10px 14px;
+  transition:.2s ease; color:white; font-weight:600;
+}
+.btn-primary{ background:var(--primary) }
+.btn-primary:hover{ background:var(--primary-hover); transform:translateY(-1px) }
+.btn-outline{
+  background:transparent; color:var(--text);
+  border:1px solid rgba(255,255,255,0.18);
+}
+.btn-outline:hover{ border-color:rgba(255,255,255,0.34) }
+.btn-danger{ background:var(--danger) }
+.btn-danger:hover{ filter:brightness(0.95) }
+
+.grid{
+  display:grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap:var(--gap);
+}
+.card{
+  background: #0f1326;
+  border:1px solid rgba(255,255,255,0.07);
+  border-radius:14px;
+  padding:14px;
+  box-shadow:0 6px 16px var(--shadow);
+  transition:.25s ease;
+}
+.card:hover{ transform: translateY(-3px); box-shadow:0 12px 26px var(--shadow) }
+.card .title{ font-weight:600; margin:0 0 6px 0 }
+.card .meta{ color:var(--muted); font-size:13px; margin-bottom:10px }
+.card .actions{ display:flex; gap:8px; flex-wrap:wrap }
+
+.pagination{
+  display:flex; justify-content:center; align-items:center; gap:8px; margin-top:12px;
+}
+.pagination button{
+  background:#0f1326; color:var(--text);
+  border:1px solid rgba(255,255,255,0.15);
+  padding:8px 12px; border-radius:10px; cursor:pointer; transition:.2s ease;
+}
+.pagination button:hover{ border-color:rgba(255,255,255,0.3); transform:translateY(-1px) }
+.pagination button[disabled], .pagination button[aria-disabled="true"]{
+  opacity:.45; cursor:not-allowed; transform:none;
 }
 
-.welcome {
-  text-align: center;
-  margin-top: 20px;
-  font-size: 1.3rem;
+.empty{
+  color:var(--muted);
+  background: #0f1326; border:1px dashed rgba(255,255,255,0.18);
+  padding:16px; border-radius:12px; text-align:center;
 }
 
-.hidden {
-  display: none;
-}
-
-.admin-section, .user-section {
-  background-color: rgba(0, 0, 0, 0.7);
-  margin: 30px auto;
-  padding: 20px;
-  width: 80%;
-  border-radius: 12px;
-  box-shadow: 0 0 15px rgba(255, 215, 0, 0.4);
-}
-
-.list-container {
-  margin-top: 10px;
-}
-
-.item {
-  background: rgba(50, 50, 50, 0.8);
-  padding: 10px;
-  margin: 8px 0;
-  border-radius: 8px;
-  border: 1px solid goldenrod;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.btn-primary, .btn-danger, .btn-logout {
-  cursor: pointer;
-  border: none;
-  border-radius: 8px;
-  padding: 8px 14px;
-  font-family: 'Cinzel', serif;
-  transition: 0.3s;
-}
-
-.btn-primary {
-  background-color: goldenrod;
-  color: black;
-}
-
-.btn-primary:hover {
-  background-color: #b8860b;
-}
-
-.btn-danger {
-  background-color: darkred;
-  color: #fff;
-}
-
-.btn-danger:hover {
-  background-color: #8b0000;
-}
-
-.btn-logout {
-  background-color: transparent;
-  border: 1px solid goldenrod;
-  color: goldenrod;
-}
-
-.btn-logout:hover {
-  background-color: goldenrod;
-  color: black;
-}
-
-input {
-  padding: 8px;
-  margin-right: 10px;
-  border-radius: 6px;
-  border: 1px solid goldenrod;
-  background: rgba(40, 40, 40, 0.8);
-  color: #f5f0d0;
-}
+/* Make inline buttons match classes in your HTML */
+/* .btn-delete{ composes: btn btn-danger; } /* if using CSS Modules ignore this */
+/* .btn-primary{  */
