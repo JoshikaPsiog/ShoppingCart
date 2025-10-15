@@ -187,7 +187,7 @@ textarea {
   filter: brightness(0.92);
 }
 #orderPlacedPopup {
-    z-index: 1200; /* or higher than checkout modal */
+    z-index: 1200;
 }
 
 #cartList .cart-total {

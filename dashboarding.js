@@ -1,4 +1,4 @@
-// ================= Global Setup =================
+
 const uid = sessionStorage.getItem("uid");
 const idToken = sessionStorage.getItem("idToken");
 const BASE_URL = "https://firestore.googleapis.com/v1/projects/shoppingcart-4b24e/databases/(default)/documents";
@@ -10,11 +10,10 @@ if (!uid || !idToken) {
     window.location.href = "auth.html";
 }
 
-// ================= DOM Elements =================
 const welcomeText = document.getElementById("welcomeText");
 const adminSection = document.getElementById("adminSection");
 const userSection = document.getElementById("userSection");
-const cartSection = document.getElementById("cartSection"); // may not exist; guarded below
+const cartSection = document.getElementById("cartSection"); 
 const logoutBtn = document.getElementById("logoutBtn");
 
 // Pay Now (checkout) elements
@@ -41,7 +40,6 @@ let userCurrentPage = 0;
 let adminPages = [];
 let adminCurrentPage = 0;
 
-// ================= Modal Helpers =================
 function showCart() {
     const overlay = document.getElementById("cartOverlay");
     const modal = document.getElementById("cartModal");
@@ -113,7 +111,6 @@ const prevPageBtn = document.getElementById("prevPage");
 if (nextPageBtn) nextPageBtn.onclick = () => loadAdminProductsPaginated("next");
 if (prevPageBtn) prevPageBtn.onclick = () => loadAdminProductsPaginated("prev");
 
-// Admin add product (includes price)
 if (addProductBtn) {
     
 addProductBtn.onclick = async () => {
@@ -132,7 +129,7 @@ addProductBtn.onclick = async () => {
             name:  { stringValue: name },
             qty:   { integerValue: qty },
             price: { doubleValue: priceVal },
-            imageUrl: { stringValue: imageUrl }  // ✅ Add this field
+            imageUrl: { stringValue: imageUrl }
         }
     };
 
@@ -140,7 +137,7 @@ addProductBtn.onclick = async () => {
         const url = `${BASE_URL}/products?documentId=${encodeURIComponent(name)}`;
         await axios.post(url, body, { headers: { Authorization: `Bearer ${idToken}` } });
 
-        // Clear inputs
+        
         productNameInput.value = "";
         productQtyInput.value = "";
         productPriceInput.value = "";
@@ -197,7 +194,7 @@ async function editProductPrompt(id, oldName, oldQty, oldPrice) {
 }
 
 // ====== User & Cart Functions ======
-// ================= User Product Functions =================
+
 async function loadUserProductsPaginated(direction = "next") {
     try {
         const listDiv = document.getElementById("userProductList");
@@ -270,7 +267,78 @@ async function ensureUserDoc() {
     }
 }
 
-// Add product to cart
+async function generateCustomerReport() {
+    const from = document.getElementById("custFrom").value;
+    const to = document.getElementById("custTo").value;
+    const type = document.getElementById("custType").value;
+
+    const container = document.getElementById("customerReport");
+    container.innerHTML = "<p>Loading...</p>";
+
+    try {
+        let allOrders = [];
+
+        if (isAdmin) {
+            
+            const usersResp = await axios.get(`${BASE_URL}/users?pageSize=1000`, {
+                headers: { Authorization: `Bearer ${idToken}` }
+            });
+            const users = usersResp.data.documents || [];
+
+            
+            for (const userDoc of users) {
+                const userId = userDoc.name.split("/").pop();
+                try {
+                    const ordersResp = await axios.get(`${BASE_URL}/users/${userId}/orderhistory`, {
+                        headers: { Authorization: `Bearer ${idToken}` }
+                    });
+                    const orders = ordersResp.data.documents || [];
+                    allOrders.push(...orders.map(o => ({ ...o, userId })));
+                } catch (err) {
+                    
+                    continue;
+                }
+            }
+        } else {
+            
+            const ordersResp = await axios.get(`${BASE_URL}/users/${uid}/orderhistory`, {
+                headers: { Authorization: `Bearer ${idToken}` }
+            });
+            allOrders = ordersResp.data.documents || [];
+        }
+
+        
+        const filtered = allOrders.filter(doc => {
+            const f = doc.fields;
+            const date = new Date(f.date.stringValue);
+            return (!from || date >= new Date(from)) &&
+                   (!to || date <= new Date(to)) &&
+                   (type === "all" || f.paymentType.stringValue === type);
+        });
+
+       
+        container.innerHTML = filtered.length
+            ? filtered.map(o => {
+                  const f = o.fields;
+                  return `<p>
+                      User: ${o.userId || uid} — 
+                      ${f.customerName.stringValue} — 
+                      ${f.date.stringValue} — 
+                      $${f.totalAmount.doubleValue} — 
+                      ${f.paymentType.stringValue}
+                  </p>`;
+              }).join("")
+            : "<p>No orders found</p>";
+
+    } catch (err) {
+        console.error("Customer report error:", err);
+        container.innerHTML = "<p>Failed to generate report</p>";
+    }
+}
+
+document.getElementById("generateCustomer").onclick = generateCustomerReport;
+
+
 async function addToCart(productId, name, price = 0) {
     if (!uid || !idToken) return alert("Please log in first!");
     const cartRef = `${BASE_URL}/users/${uid}/cart`;
@@ -320,7 +388,7 @@ async function addToCart(productId, name, price = 0) {
     }
 }
 
-// Load user cart
+
 async function loadCart() {
     if (isAdmin) return;
     cartList.innerHTML = "";
@@ -372,7 +440,6 @@ async function loadCart() {
     }
 }
 
-// Checkout modal
 function openCheckoutPopup() {
     if (modalCheckout) modalCheckout.style.display = "flex";
 }
@@ -391,7 +458,7 @@ if (confirmOrderBtn) {
         }
 
         try {
-            // 1️⃣ Get cart items
+            
             const resp = await axios.get(`${BASE_URL}/users/${uid}/cart`, {
                 headers: { Authorization: `Bearer ${idToken}` }
             });
@@ -402,7 +469,7 @@ if (confirmOrderBtn) {
                 return;
             }
 
-            // 2️⃣ Prepare order data
+            
             let total = 0;
             const orderItems = items.map(doc => {
                 const f = doc.fields;
@@ -435,7 +502,7 @@ if (confirmOrderBtn) {
                 }
             };
 
-            // 3️⃣ Create a unique document ID for the order
+            
             const orderDocId = `order_${Date.now()}`;
             await axios.post(
                 `${BASE_URL}/users/${uid}/orderhistory?documentId=${orderDocId}`,
@@ -443,12 +510,12 @@ if (confirmOrderBtn) {
                 { headers: { Authorization: `Bearer ${idToken}` } }
             );
 
-            // 4️⃣ Deduct product quantities from stock
+            
             for (const doc of items) {
                 const productId = doc.fields.productId.stringValue;
                 const orderedQty = parseInt(doc.fields.quantity.integerValue);
 
-                // Get current product stock
+                
                 const productDoc = await axios.get(`${BASE_URL}/products/${productId}`, {
                     headers: { Authorization: `Bearer ${idToken}` }
                 });
@@ -456,7 +523,7 @@ if (confirmOrderBtn) {
                 const currentQty = parseInt(productDoc.data.fields.qty.integerValue || 0);
                 const newQty = Math.max(currentQty - orderedQty, 0); // avoid negative stock
 
-                // Update product stock
+                
                 await axios.patch(
                     `${BASE_URL}/products/${productId}?updateMask.fieldPaths=qty`,
                     { fields: { qty: { integerValue: newQty } } },
@@ -464,14 +531,14 @@ if (confirmOrderBtn) {
                 );
             }
 
-            // 5️⃣ Delete cart items
+            
             for (const doc of items) {
                 await axios.delete(`https://firestore.googleapis.com/v1/${doc.name}`, {
                     headers: { Authorization: `Bearer ${idToken}` }
                 });
             }
 
-            // 6️⃣ Close modal and show success
+            
             if (modalCheckout) modalCheckout.style.display = "none";
             if (orderPlacedPopup) {
                 orderPlacedPopup.style.display = "block";
@@ -479,8 +546,9 @@ if (confirmOrderBtn) {
                 console.log("✅ Order placed successfully, showing popup...");
             }
 
-            // 7️⃣ Refresh cart
-            await loadCart();
+            
+await loadCart();
+await loadUserProductsPaginated("next");
 
         } catch (err) {
             console.error("❌ Place order error:", err.response?.data || err);
@@ -490,20 +558,18 @@ if (confirmOrderBtn) {
 }
 
 // ===== Customer Report =====
-// Tab switching
 const tabButtons = document.querySelectorAll(".tabBtn");
 const tabContents = document.querySelectorAll(".tabContent");
 
 tabButtons.forEach(btn => {
     btn.addEventListener("click", () => {
-        const targetId = btn.dataset.tab;
+        const tab = btn.dataset.tab;
 
-        // Hide all tab contents
+       
         tabContents.forEach(tc => tc.style.display = "none");
 
-        // Show the selected tab
-        const targetSection = document.getElementById(targetId);
-        if (targetSection) targetSection.style.display = "block";
+        const target = document.getElementById(tab);
+        if (target) target.style.display = "block";
     });
 });
 
@@ -550,6 +616,7 @@ if (generateCustomerBtn) {
 
 // ================= Init after DOM Ready =================
 document.addEventListener("DOMContentLoaded", () => {
+  
     const username = sessionStorage.getItem("role") || uid;
     if (welcomeText) welcomeText.textContent = `Welcome, ${username}!`;
 
@@ -579,12 +646,122 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    if (!isAdmin) {
-        ensureUserDoc().then(async () => {
-            await loadUserProductsPaginated("next");
-            await loadCart();
-        });
-    } else {
-        loadAdminProductsPaginated("next");
+   
+    // Customer Report
+    const generateCustomerBtn = document.getElementById("generateCustomer");
+    if (generateCustomerBtn) {
+        generateCustomerBtn.onclick = async () => {
+            const from = document.getElementById("custFrom").value;
+            const to = document.getElementById("custTo").value;
+            const type = document.getElementById("custType").value;
+
+            try {
+                const resp = await axios.get(`${BASE_URL}/users/${uid}/orderhistory`, {
+                    headers: { Authorization: `Bearer ${idToken}` }
+                });
+
+                const orders = resp.data.documents || [];
+
+                const filtered = orders.filter(doc => {
+                    const f = doc.fields;
+                    const date = new Date(f.date.stringValue);
+                    return (!from || date >= new Date(from)) &&
+                           (!to || date <= new Date(to)) &&
+                           (type === "all" || f.paymentType.stringValue === type);
+                });
+
+                const container = document.getElementById("customerReport");
+                container.innerHTML = filtered.map(o => {
+                    const f = o.fields;
+                    return `<p>${f.customerName.stringValue} — ${f.date.stringValue} — $${f.totalAmount.doubleValue} — ${f.paymentType.stringValue}</p>`;
+                }).join("") || "<p>No orders found</p>";
+
+            } catch (err) {
+                console.error("Customer report error:", err);
+            }
+        };
     }
+
+    // Inventory Report
+    const generateInventoryBtn = document.getElementById("generateInventory");
+    if (generateInventoryBtn) {
+        generateInventoryBtn.onclick = async () => {
+            const category = document.getElementById("invCategory").value;
+            const stockFilter = document.getElementById("invStock").value;
+
+            try {
+                const resp = await axios.get(`${BASE_URL}/products?pageSize=1000`, {
+                    headers: { Authorization: `Bearer ${idToken}` }
+                });
+                const products = resp.data.documents || [];
+
+                const filtered = products.filter(doc => {
+                    const f = doc.fields;
+                    const qty = parseInt(f.qty?.integerValue ?? 0);
+
+                    const catMatch = category === "all" || (f.category?.stringValue === category);
+                    const stockMatch = stockFilter === "all" ||
+                                       (stockFilter === "high" && qty > 100) ||
+                                       (stockFilter === "low" && qty < 15);
+                    return catMatch && stockMatch;
+                });
+
+                const container = document.getElementById("inventoryReport");
+                container.innerHTML = filtered.map(p => {
+                    const f = p.fields;
+                    return `<p>${f.name.stringValue} — Qty: ${f.qty.integerValue} — $${f.price.doubleValue ?? f.price.integerValue}</p>`;
+                }).join("") || "<p>No products found</p>";
+
+            } catch (err) {
+                console.error("Inventory report error:", err);
+            }
+        };
+    }
+
+    // Sales Report
+    const generateSalesBtn = document.getElementById("generateSales");
+    if (generateSalesBtn) {
+        generateSalesBtn.onclick = async () => {
+            const from = document.getElementById("salesFrom").value;
+            const to = document.getElementById("salesTo").value;
+            const type = document.getElementById("salesType").value;
+
+            try {
+                const usersResp = await axios.get(`${BASE_URL}/users`, {
+                    headers: { Authorization: `Bearer ${idToken}` }
+                });
+                const users = usersResp.data.documents || [];
+
+                let allOrders = [];
+                for (const user of users) {
+                    const uid = user.name.split("/").pop();
+                    try {
+                        const ordersResp = await axios.get(`${BASE_URL}/users/${uid}/orderhistory`, {
+                            headers: { Authorization: `Bearer ${idToken}` }
+                        });
+                        allOrders.push(...(ordersResp.data.documents || []));
+                    } catch {}
+                }
+
+                const filtered = allOrders.filter(doc => {
+                    const f = doc.fields;
+                    const date = new Date(f.date.stringValue);
+                    return (!from || date >= new Date(from)) &&
+                           (!to || date <= new Date(to)) &&
+                           (type === "all" || f.paymentType.stringValue === type);
+                });
+
+                const container = document.getElementById("salesReport");
+                container.innerHTML = filtered.map(o => {
+                    const f = o.fields;
+                    return `<p>${f.customerName.stringValue} — ${f.date.stringValue} — $${f.totalAmount.doubleValue} — ${f.paymentType.stringValue}</p>`;
+                }).join("") || "<p>No sales found</p>";
+
+            } catch (err) {
+                console.error("Sales report error:", err);
+            }
+        };
+    }
+
 });
+

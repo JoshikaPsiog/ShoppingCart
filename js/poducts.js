@@ -1,11 +1,11 @@
-// products.js
+
 const PROJECT_ID = "shoppingcart-4b24e";
 const BASE_URL = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
 const PRODUCTS_API = `${BASE_URL}/products`;
 
 const axiosInstance = axios.create({ baseURL: BASE_URL });
 
-/* ✅ Fetch all products */
+
 async function fetchAllProducts() {
   try {
     const resp = await axiosInstance.get("/products");
@@ -20,7 +20,7 @@ async function fetchAllProducts() {
   }
 }
 
-/* ✅ Add new product (Admin only) */
+
 async function addProductREST(name, qty, idToken) {
   try {
     await axios.post(
@@ -28,14 +28,14 @@ async function addProductREST(name, qty, idToken) {
       { fields: { name: { stringValue: name }, qty: { integerValue: qty } } },
       { headers: { Authorization: `Bearer ${idToken}` } }
     );
-    alert("✅ Product added!");
+    alert(" Product added!");
   } catch (err) {
     console.error("Failed to add product:", err);
-    alert("❌ Could not add product (maybe already exists?)");
+    alert("Could not add product (maybe already exists?)");
   }
 }
 
-/* ✅ Delete product (Admin only) */
+
 async function deleteProductREST(name, idToken) {
   try {
     await axios.delete(`${PRODUCTS_API}/${name}`, {
